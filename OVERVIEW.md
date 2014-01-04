@@ -21,4 +21,4 @@ building to be resumed once back up.
 
 Once a build completes without failure remove it from queue.
 
-Building should not resume unless a port has been modified.
+Rebuilding of failed port should not resume unless a port has been modified.
