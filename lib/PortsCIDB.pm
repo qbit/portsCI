@@ -2,6 +2,7 @@ package PortsCIDB;
 
 use strict;
 use warnings;
+use Data::Dumper;
 
 sub new {
 	my ($class, $options) = @_;
@@ -12,6 +13,12 @@ sub new {
 	}
 
 	bless $self, $class;
+
+	if ($self->{db}) {
+		$self->_read();
+	}
+
+	$self->{store} = [];
 
 	return $self;
 }
@@ -25,19 +32,74 @@ sub debug {
 sub dpop {
 	# pop the last record off the queue
 	my $self = shift;
-	$self->debug("PortsCIDB->dpop");
+
+	my $ret = pop $self->{store};
+
+	$self->debug("PortsCIDB->dpop: $ret");
+	$self->_write();
+
+	return $ret;
 }
 
 sub dpush {
 	# push a record into the queue
 	my ($self, $line) = @_;
-	$self->debug("PortsCIDB->dpush");
+
+	$self->debug("PortsCIDB->dpush: $line");
+
+	push($self->{store}, time .";". $line);
+
+	$self->_write();
 }
 
 sub dshift {
 	# return the first value in the queue
 	my $self = shift;
-	$self->debug("PortsCIDB->dshift");
+
+	my $ret = shift $self->{store};
+	
+	$self->debug("PortsCIDB->dshift: $ret");
+	$self->_write();
+
+	return $ret;
+}
+
+sub finish {
+	my $self = shift;
+	$self->debug("PortsCIDB->finish");
+	$self->_write();
+}
+
+sub _write {
+	my ($self, $db) = @_;
+
+	if ($db) {
+		open(FH, ">", $db) or die "Can't open $db";
+	} else {
+		open(FH, ">", $self->{db}) or die "Can't open $self->{db}";
+	}
+
+	foreach (@{$self->{store}}) {
+		my $time = time;
+		print FH "$time;$_\n";
+	}
+
+	close FH;
+}
+
+sub _read {
+	my ($self, $db) = @_;
+
+	if ($db) {
+		open(FH, "<", $db) or die "Can't open $db";
+	} else {
+		open(FH, "<", $self->{db}) or die "Can't open $self->{db}";
+	}
+
+	$self->{store} = <FH>;
+
+	
+	close FH;
 }
 
 sub _query {
